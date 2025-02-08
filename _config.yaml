@@ -4,3 +4,7 @@ title: Lukas Malms
 # logo: /assets
 # description: text below image
 
+plugins:
+  - jekyll-feed
+
+future: true
