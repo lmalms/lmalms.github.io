@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>ASHRAE III | Lukas Malms</title>
+<meta name="generator" content="Jekyll v3.9.5" />
+<meta property="og:title" content="ASHRAE III" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Introduction" />
+<meta property="og:description" content="Introduction" />
+<link rel="canonical" href="http://localhost:4000/blog/2025/02/17/ashrae.html" />
+<meta property="og:url" content="http://localhost:4000/blog/2025/02/17/ashrae.html" />
+<meta property="og:site_name" content="Lukas Malms" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-02-17T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ASHRAE III" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2025-02-17T00:00:00+00:00","datePublished":"2025-02-17T00:00:00+00:00","description":"Introduction","headline":"ASHRAE III","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/blog/2025/02/17/ashrae.html"},"url":"http://localhost:4000/blog/2025/02/17/ashrae.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Lukas Malms" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Lukas Malms</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/">Welcome to my blog</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">ASHRAE III</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2025-02-17T00:00:00+00:00" itemprop="datePublished">Feb 17, 2025
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <h2 id="introduction">Introduction</h2>
+
+<p>This blog post summarises some of my work on the <a href="https://www.kaggle.com/competitions/ashrae-energy-prediction">ASHRAE III energy prediction competition</a>. The aim of this competition was to predict energy consumption for a range of different buildings, across several sites and meter types in order to estimate the energy efficiency gains and cost savings from building retrofits. Knowing how much energy a building would have consumed without any improvements is challenging but is necessary in order to quantify efficiency improvements. One option is to build a counterfactual model that estimates building energy consumption in the absence of any building improvements, and the purpose of this competition was to find out if machine learning can help with this task.</p>
+
+<p>The code for all plots, feature engineering, and models can be found <a href="https://github.com/lmalms/sequence-learners/tree/main/ashrae">here</a>.</p>
+
+<h2 id="data">Data</h2>
+
+<p>The training dataset consisted of hourly meter readings for the year 2016 for four different meter types (chilled water, electricity, hot water, and steam) from roughly 1450 buildings across 15 different sites. Note that not every building had readings for every meter type. In addition to the readings data, the training data contained metadata about each building such as its primary use (e.g. Education, Office, Retail, etc.), its size and floor count, as well as weather data from each site.</p>
+
+<h2 id="evaluation">Evaluation</h2>
+
+<p>Models were evaluated by comparing model predictions against ground truth meter readings for 2017, and 2018. Predictions were evaluated using the root mean squared logarithmic error (RMSLE) between predicted and actual meter readings. This metric has some interesting properties that make it a useful evaluation metric for this competition:</p>
+
+<p>-&gt; Add link to notebook here</p>
+
+<h3 id="robustness-to-outliers">Robustness to outliers</h3>
+
+<p>The RMSLE is more stable in the presence of outliers compared to for example the RMSE. As shown later on, the training data (and therefore likely also the evaluation data) contained several short spikes in consumption data, some of them up to 100x of the average meter reading. Those are likely erroneous readings rather than true consumption data and therefore the model should not be penalised for getting those measurements wrong. However, the RMSE would explode in the presence of these measurements and the total error would likely be dominated by these outliers, while the RMSLE is relatively stable.</p>
+
+<h3 id="sensitivity-to-relative-errors">Sensitivity to relative errors</h3>
+
+<p>The RMSLE is sensitive to relative errors. That is predicting 10.1 for a true value of 10.0 is penalised (roughly) the same as predicting 101 for a true value of 100. The relative error is 1% in both cases but the absolute error differs by a factor of 10. The RMSE on the other hand is not sensitive to the scale of the error relative to the true value. In the example above, the error would differ by 10x between the two predictions.</p>
+
+<p>This sensitivity to relative errors is a useful property for this use case as we are trying to estimate efficiency gains for individual buildings which is a relative measure. If we penalised errors for buildings with high average consumption more strongly than errors on buildings with low consumption, we would bias model selection towards models that performed well on high consumption buildings but that might produce poor estimates for buildings with low consumption.</p>
+
+<h3 id="asymmetry">Asymmetry</h3>
+
+<p>RMSLE penalises underestimation more strongly than overestimation of the true value. This is an interesting property and I can see how in some business cases a slight overestimation can be tolerated while underestimation cannot. However, for this particular use case it is unclear to me which way the asymmetry should really go. From the perspective of encouraging building owners to invest in retrofits, underestimating efficiency gains would make efficiency gains look smaller than they actually are hence discouraging buildings owners to make the necessary investments. However, from the perspective of reporting on existing retrofits and estimating how much energy has actually been saved, overestimation would make the efficiency gains seem larger than they actually are.</p>
+
+<h2 id="data-feature-engineering-and-outliers">Data, feature engineering, and outliers</h2>
+
+<h3 id="energy-consumption-patterns">Energy consumption patterns</h3>
+
+<p>The plot below shows a timeseries of energy consumption (log transformed) by meter type for each building in the training dataset (gray). It also show the average consumption across all buildings for that meter type (orange). Although there can be some large variation in consumption for individual buildings, there are some patterns in the average consumption data across all buildings. For electricity for example, there is a clear weekly pattern with higher consumption during the week compared to the weekend. For chilled water, there is a clear seasonal pattern with higher consumption in the summer compared to the winter as well as a weaker weekly pattern. For steam and hot water, there is the longer term seasonal pattern of lower consumtpion durin summer months but no clear weekly pattern.</p>
+
+<p><img src="/assets/ashrae/meter_readings_by_type.png" alt="meter-readings-by-type" /></p>
+
+<p>The plot below shows a heatmap of average energy consumption for each meter type broken down by building use. It is clear that a building’s primary use has a large impact on its energy consumption. The seasonal patterns mentioned above are again visible but there are also some differences in consumption patterns between different building types. For example, while most buildings show the weekly pattern of higher electricity consumption during the week, the pattern is less pronounced for buildings in the Warehouse/Storage and Technology/Science categories. Buildings in the Warehouse/Storage category also show lower electricity consumption compared to other building types on average. As another example, even though most buildings show the seasonal pattern of reduced chilled water consumption in the winter, buildings in the Utility category show nearly constant very high consumption throughout the year.</p>
+
+<p><img src="/assets/ashrae/meter_readings_by_type_and_use_heatmap.png" alt="meter-readings-by-use" /></p>
+
+<h3 id="outliers">Outliers</h3>
+
+<h2 id="modelling">Modelling</h2>
+
+<h2 id="results-error-analysis">Results, error analysis</h2>
+
+<h2 id="learnings">Learnings</h2>
+
+<h2 id="resources">Resources</h2>
+
+<ul>
+  <li><a href="https://medium.com/analytics-vidhya/root-mean-square-log-error-rmse-vs-rmlse-935c6cc1802a">Post on the differences between RMSLE vs. RMSE metrics</a></li>
+</ul>
+
+  </div><a class="u-url" href="/blog/2025/02/17/ashrae.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Lukas Malms</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Lukas Malms</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p></p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

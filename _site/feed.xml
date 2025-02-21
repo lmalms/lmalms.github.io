@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.5">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-02-21T09:03:58+00:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Lukas Malms</title><entry><title type="html">ASHRAE III</title><link href="http://localhost:4000/blog/2025/02/17/ashrae.html" rel="alternate" type="text/html" title="ASHRAE III" /><published>2025-02-17T00:00:00+00:00</published><updated>2025-02-17T00:00:00+00:00</updated><id>http://localhost:4000/blog/2025/02/17/ashrae</id><content type="html" xml:base="http://localhost:4000/blog/2025/02/17/ashrae.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+
+<p>This blog post summarises some of my work on the <a href="https://www.kaggle.com/competitions/ashrae-energy-prediction">ASHRAE III energy prediction competition</a>. The aim of this competition was to predict energy consumption for a range of different buildings, across several sites and meter types in order to estimate the energy efficiency gains and cost savings from building retrofits. Knowing how much energy a building would have consumed without any improvements is challenging but is necessary in order to quantify efficiency improvements. One option is to build a counterfactual model that estimates building energy consumption in the absence of any building improvements, and the purpose of this competition was to find out if machine learning can help with this task.</p>
+
+<p>The code for all plots, feature engineering, and models can be found <a href="https://github.com/lmalms/sequence-learners/tree/main/ashrae">here</a>.</p>
+
+<h2 id="data">Data</h2>
+
+<p>The training dataset consisted of hourly meter readings for the year 2016 for four different meter types (chilled water, electricity, hot water, and steam) from roughly 1450 buildings across 15 different sites. Note that not every building had readings for every meter type. In addition to the readings data, the training data contained metadata about each building such as its primary use (e.g. Education, Office, Retail, etc.), its size and floor count, as well as weather data from each site.</p>
+
+<h2 id="evaluation">Evaluation</h2>
+
+<p>Models were evaluated by comparing model predictions against ground truth meter readings for 2017, and 2018. Predictions were evaluated using the root mean squared logarithmic error (RMSLE) between predicted and actual meter readings. This metric has some interesting properties that make it a useful evaluation metric for this competition:</p>
+
+<p>-&gt; Add link to notebook here</p>
+
+<h3 id="robustness-to-outliers">Robustness to outliers</h3>
+
+<p>The RMSLE is more stable in the presence of outliers compared to for example the RMSE. As shown later on, the training data (and therefore likely also the evaluation data) contained several short spikes in consumption data, some of them up to 100x of the average meter reading. Those are likely erroneous readings rather than true consumption data and therefore the model should not be penalised for getting those measurements wrong. However, the RMSE would explode in the presence of these measurements and the total error would likely be dominated by these outliers, while the RMSLE is relatively stable.</p>
+
+<h3 id="sensitivity-to-relative-errors">Sensitivity to relative errors</h3>
+
+<p>The RMSLE is sensitive to relative errors. That is predicting 10.1 for a true value of 10.0 is penalised (roughly) the same as predicting 101 for a true value of 100. The relative error is 1% in both cases but the absolute error differs by a factor of 10. The RMSE on the other hand is not sensitive to the scale of the error relative to the true value. In the example above, the error would differ by 10x between the two predictions.</p>
+
+<p>This sensitivity to relative errors is a useful property for this use case as we are trying to estimate efficiency gains for individual buildings which is a relative measure. If we penalised errors for buildings with high average consumption more strongly than errors on buildings with low consumption, we would bias model selection towards models that performed well on high consumption buildings but that might produce poor estimates for buildings with low consumption.</p>
+
+<h3 id="asymmetry">Asymmetry</h3>
+
+<p>RMSLE penalises underestimation more strongly than overestimation of the true value. This is an interesting property and I can see how in some business cases a slight overestimation can be tolerated while underestimation cannot. However, for this particular use case it is unclear to me which way the asymmetry should really go. From the perspective of encouraging building owners to invest in retrofits, underestimating efficiency gains would make efficiency gains look smaller than they actually are hence discouraging buildings owners to make the necessary investments. However, from the perspective of reporting on existing retrofits and estimating how much energy has actually been saved, overestimation would make the efficiency gains seem larger than they actually are.</p>
+
+<h2 id="data-feature-engineering-and-outliers">Data, feature engineering, and outliers</h2>
+
+<h3 id="energy-consumption-patterns">Energy consumption patterns</h3>
+
+<p>The plot below shows a timeseries of energy consumption (log transformed) by meter type for each building in the training dataset (gray). It also show the average consumption across all buildings for that meter type (orange). Although there can be some large variation in consumption for individual buildings, there are some patterns in the average consumption data across all buildings. For electricity for example, there is a clear weekly pattern with higher consumption during the week compared to the weekend. For chilled water, there is a clear seasonal pattern with higher consumption in the summer compared to the winter as well as a weaker weekly pattern. For steam and hot water, there is the longer term seasonal pattern of lower consumtpion durin summer months but no clear weekly pattern.</p>
+
+<p><img src="/assets/ashrae/meter_readings_by_type.png" alt="meter-readings-by-type" /></p>
+
+<p>The plot below shows a heatmap of average energy consumption for each meter type broken down by building use. It is clear that a building’s primary use has a large impact on its energy consumption. The seasonal patterns mentioned above are again visible but there are also some differences in consumption patterns between different building types. For example, while most buildings show the weekly pattern of higher electricity consumption during the week, the pattern is less pronounced for buildings in the Warehouse/Storage and Technology/Science categories. Buildings in the Warehouse/Storage category also show lower electricity consumption compared to other building types on average. As another example, even though most buildings show the seasonal pattern of reduced chilled water consumption in the winter, buildings in the Utility category show nearly constant very high consumption throughout the year.</p>
+
+<p><img src="/assets/ashrae/meter_readings_by_type_and_use_heatmap.png" alt="meter-readings-by-use" /></p>
+
+<h3 id="outliers">Outliers</h3>
+
+<h2 id="modelling">Modelling</h2>
+
+<h2 id="results-error-analysis">Results, error analysis</h2>
+
+<h2 id="learnings">Learnings</h2>
+
+<h2 id="resources">Resources</h2>
+
+<ul>
+  <li><a href="https://medium.com/analytics-vidhya/root-mean-square-log-error-rmse-vs-rmlse-935c6cc1802a">Post on the differences between RMSLE vs. RMSE metrics</a></li>
+</ul>]]></content><author><name></name></author><category term="blog" /><summary type="html"><![CDATA[Introduction]]></summary></entry></feed>
