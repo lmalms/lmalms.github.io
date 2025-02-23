@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.5">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-02-23T12:49:41+00:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Lukas Malms</title><entry><title type="html">ASHRAE III</title><link href="http://localhost:4000/blog/2025/02/17/ashrae.html" rel="alternate" type="text/html" title="ASHRAE III" /><published>2025-02-17T00:00:00+00:00</published><updated>2025-02-17T00:00:00+00:00</updated><id>http://localhost:4000/blog/2025/02/17/ashrae</id><content type="html" xml:base="http://localhost:4000/blog/2025/02/17/ashrae.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+
+<p>This post summarises some of my work on the <a href="https://www.kaggle.com/competitions/ashrae-energy-prediction">ASHRAE III energy prediction competition</a>. The aim of this competition was to predict energy consumption for a range of different buildings, across several sites and meter types in order to estimate energy efficiency gains and cost savings from building retrofits. Knowing how much energy a building would have consumed without any improvements is challenging but necessary in order to quantify efficiency improvements. One option is to build a counterfactual model that estimates building energy consumption in the absence of any building improvements. The purpose of this competition was to find out if machine learning can help with this task.</p>
+
+<p>The code for all plots, feature engineering, and models can be found <a href="https://github.com/lmalms/sequence-learners/tree/main/ashrae">here</a>.</p>
+
+<h2 id="data">Data</h2>
+
+<p>The training dataset consisted of hourly meter readings for the year 2016 for four different meter types (chilled water, electricity, hot water, and steam) from roughly 1450 buildings across 15 different sites. Note that not every building had readings for every meter type. In addition to the readings data, the training data contained metadata about each building such as its primary use (e.g. Education, Office, Retail, etc.), its size and floor count, as well as weather data from each site.</p>
+
+<h2 id="evaluation">Evaluation</h2>
+
+<p>Models were evaluated by comparing model predictions against ground truth meter readings for 201 and 2018. Predictions were evaluated using the root mean squared logarithmic error (RMSLE) between predicted and actual meter readings. This metric has some useful properties:</p>
+
+<h4 id="robustness-to-outliers">Robustness to outliers</h4>
+
+<p>The RMSLE is more stable in the presence of outliers compared to for example the RMSE. As shown later on, the training data (and therefore likely also the evaluation data) contained several short spikes in consumption data, some of them up to 100x of the average meter reading. Those are likely erroneous readings rather than true consumption data and therefore the model should not be penalised for getting those measurements wrong. However, the RMSE would explode in the presence of these measurements and the total error would likely be dominated by these outliers, while the RMSLE is relatively stable.</p>
+
+<h4 id="sensitivity-to-relative-errors">Sensitivity to relative errors</h4>
+
+<p>The RMSLE is sensitive to relative errors. That is predicting 10.1 for a true value of 10.0 is penalised (roughly) the same as predicting 101 for a true value of 100. The relative error is 1% in both cases but the absolute error differs by a factor of 10. The RMSE on the other hand is not sensitive to the scale of the error relative to the true value. In the example above, the error would differ by 10x between the two predictions.</p>
+
+<p>The sensitivity to relative errors is a useful property for this prediction problem as we are trying to estimate efficiency gains for individual buildings which is a relative measure. If we penalised errors for buildings with high average consumption more strongly than errors on buildings with low consumption, we would bias model selection towards models that performed well on high consumption buildings but that might produce poor estimates for buildings with low consumption.</p>
+
+<h4 id="asymmetric-penalty">Asymmetric penalty</h4>
+
+<p>RMSLE penalises underestimation more strongly than overestimation of the true value. This is an interesting property and I can see how in some business cases a slight overestimation can be tolerated while underestimation cannot. However, for this particular use case it is unclear to me which way the asymmetry should really go. From the perspective of encouraging building owners to invest in retrofits, underestimating efficiency gains would make efficiency gains look smaller than they actually are, hence discouraging buildings owners to make the necessary investments. So overestimations could be tolerated while underestimations could not. However, from the perspective of reporting on existing retrofits and estimating how much energy has actually been saved, overestimation would make the efficiency gains seem larger than they actually are, potentially leading to overestimation of the benefits of retrofits and the energy savings achieved.</p>
+
+<h2 id="data-outliers-and-feature-engineering">Data, outliers, and feature engineering</h2>
+
+<h3 id="energy-consumption-patterns">Energy consumption patterns</h3>
+
+<p>The plot below shows a timeseries of energy consumption (log transformed) by meter type for each building in the training dataset (gray). It also show the average consumption across all buildings for that meter type (orange). Although there can be some large variation in consumption for individual buildings, there are some repeating patterns in the average consumption data across all buildings. For electricity for example, there is a clear weekly pattern with higher consumption during the week compared to the weekend. For chilled water, there is a clear seasonal pattern with higher consumption in the summer compared to the winter months as well as a weaker weekly pattern. For steam and hot water, there is the longer term seasonal pattern of lower consumption during summer months but no clear weekly pattern.</p>
+
+<p><img src="/assets/ashrae/meter_readings_by_type.png" alt="meter-readings-by-type" />
+<em>Energy consumption by meter type for each building in the training dataset (gray) and average consumption across all buildings for that meter type (orange).</em></p>
+
+<p>The plot below shows a heatmap of average energy consumption for each meter type broken down by building use. It is clear that a building’s primary use has a large impact on its energy consumption. The seasonal patterns mentioned above are again visible but there are also some differences in consumption patterns between different building types. For example, while most buildings show the weekly pattern of higher electricity consumption during the week, the pattern is less pronounced for buildings in the Warehouse/Storage and Technology/Science categories. Buildings in the Warehouse/Storage category also show lower electricity consumption compared to other building types on average. As another example, even though most buildings show the seasonal pattern of reduced chilled water consumption in the winter, buildings in the Utility category show nearly constant very high consumption throughout the year.</p>
+
+<p><img src="/assets/ashrae/meter_readings_by_type_and_use_heatmap.png" alt="meter-readings-by-use" />
+<em>Average energy consumption by meter type and building use.</em></p>
+
+<h3 id="outliers">Outliers</h3>
+
+<p>The plot below illustrates the types of outliers and anomalies present in the training data. The plot focusses on anomalies in the electricity meter readings but similar types of anomalies were present in the other meter types as well. I would broadly classify the anomalies into four categories:</p>
+
+<ol>
+  <li>
+    <p><strong>Prolonged periods of zero consumption (top plot)</strong>: Some buildings have prolonged periods of zero consumption. Whether this is an anomaly or not likely depends on the meter type. For electricity for example it seems unlikely to have long periods of zero consumption, while for chilled water it might be more common to have zero consumption during the winter months (see the heatmap above).</p>
+  </li>
+  <li>
+    <p><strong>Prolonged periods of constant non-zero consumption (second plot)</strong>: Some buildings have prolonged periods of constant non-zero consumption. I often saw periods of constant non-zero consumption for 24 hours or more. This again seemed unlikely to me.</p>
+  </li>
+  <li>
+    <p><strong>Short spikes in consumption (third plot)</strong>: Some buildings have short spikes in consumption. These spikes could be up to 100x the average consumption for that building, which again seemed unlikely.</p>
+  </li>
+  <li>
+    <p><strong>Consumption shifts (bottom plot)</strong>: Some buildings have sudden upward / downward shifts in consumption, even though the hourly consumption pattern remained the same.</p>
+  </li>
+</ol>
+
+<p><img src="/assets/ashrae/outlier_types_electricity.png" alt="outliers" />
+<em>Different types of outliers in electricity meter readings.</em></p>
+
+<p>I removed the first two types of anomalies from the training data as they were relatively easy to spot, and it was possible to write some simple logic to identify and remove them. The third and fourth type of anomalies were more difficult to spot and I did not remove them from the training data. Future work could focus on developing more automated methods (e.g. anomaly detection algorithms) to identify and remove these types of anomalies.</p>
+
+<p>It is worth pointing out that removing these anomalies was the key to getting good predictions in this competition.</p>
+
+<h3 id="feature-engineering">Feature engineering</h3>
+
+<p>I included all of the features provided in the training data. I also added the following basic features:</p>
+
+<p><strong>Temporal features (sine and cosine)</strong>: Hour of the day, day of the week, month of the year</p>
+
+<p><strong>Building metadata</strong>: Building age, building size (square feet * floor count)</p>
+
+<p><strong>Weather data</strong>: Feels-like temperature, cold and heat index, lagged and rolling average temperature and pressure</p>
+
+<p>I did not add any lagged features because there were often gaps in the training data, either because the data was missing from the start or was removed as an outlier, which meant that the lagged features would also often be missing. The forecasting horizon was also very long (two years) and I wasn’t sure how well an auto-regressive approach would work over such a long horizon. Instead I assumed a more direct regression approach would work better.</p>
+
+<p>I tried target encoding the high cardinality building id feature but this did not improve model performance significantly. Adding holiday periods would likely have improved predictions but it was unclear which sites the buildings were located in (only an integer site id was provided) and therefore which holidays to include.</p>
+
+<h2 id="modelling">Modelling</h2>
+
+<h3 id="lightgbm">LightGBM</h3>
+
+<p>Once I had a clean training dataset in place it was relatively straightforward to achieve decent performance against the evaluation datasets. In fact, just training a single LightGBM model was enough to achieve a score of 1.287 on the private leaderboard (~85th percentile). I also investigated training individual models for each meter type but this did not improve performance significantly. I didn’t not spend much time tuning hyperparameters but I did notice a decent boost in performance when using non-default parameters. In particular, reducing the bagging fraction, increasing bagging frequency, and reducing the feature fraction all improved performance. I did not use early stopping as training seemed quite stable without overfitting even for a large number of iterations. So I just set the learning rate to a relatively low value and trained for a large number of iterations. The following parameters gave the best performance:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"objective"</span><span class="p">:</span> <span class="s">"mean_squared_error"</span><span class="p">,</span>
+    <span class="s">"learning_rate"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+    <span class="s">"max_bin"</span><span class="p">:</span> <span class="mi">255</span><span class="p">,</span>
+    <span class="s">"num_leaves"</span><span class="p">:</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">6</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s">"min_data_in_leaf"</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="s">"bagging_fraction"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="s">"bagging_freq"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s">"feature_fraction"</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="error-analysis">Error analysis</h3>
+
+<p>I looked a little bit into the kinds of errors made by the best performing model. The only validation data available was from 2016 (part of the training data), so I trained a model up to the start of December 2016 and then validated on the remaining data. The plot below shows distributions of actual and predicted meter readings for each meter type. The model performs well on electricity meter readings with the predicted distribution closely matching the actual distribution. The distributions match less well for the other meter types. In particular the model underestimates the number of zero readings for all meter types. In the case of chilled water in particular this suggests that the model is not capturing the seasonal pattern of zero consumption during the winter months. This is maybe not surprising given that there was no consumption data for the month of December in the training data.</p>
+
+<p><img src="/assets/ashrae/target_distributions.png" alt="target-distribution" />
+<em>Distributions of actual and predicted meter readings for each meter type.</em></p>
+
+<p>The distributions above do not show the errors made at an individual building level, so below I am plotting prediction errors for individual buildings across three different sites for electricity and steam meter readings. I categorised the errors into three categories according to the magnitude of the error:</p>
+
+<ul>
+  <li><strong>Level 1:</strong> Error below 75th percentile of errors</li>
+  <li><strong>Level 2:</strong> Error between 75th and 90th percentile of errors</li>
+  <li><strong>Level 3:</strong> Error above 90th percentile of errors</li>
+</ul>
+
+<p>There are a couple of interesting things to note about the error plots blow:</p>
+
+<p><strong>Seasonal patterns</strong>: For some buildings there seems to be a repeating pattern of errors, both in terms of the magnitude and the timing of the errors. This suggests that the model is not quite capturing the seasonal patterns in consumption data, or that it under - or overestimates consumption at certain times of day (e.g. peak hours).</p>
+
+<p><strong>Building specific errors</strong>: Some buildings have consistently high (all level 3) or low (all level 1) errors across the entire validation period. This suggests that the model is not capturing some building specific features that are important for predicting energy consumption.</p>
+
+<p><strong>Site specific errors</strong>: For certain timestamps in the validation period, all buildings at a particular site have high errors (e.g. vertical error bars for site 14 for electricity and site 9 for steam). This suggests that the model is not capturing some site specific features (e.g. holiday periods) that are important for predicting energy consumption.</p>
+
+<p><img src="/assets/ashrae/electricity_error_heatmaps.png" alt="electricity-errors" />
+<em>Prediction errors for individual buildings across three different sites for electricity meter readings.</em></p>
+
+<p><img src="/assets/ashrae/steam_error_heatmaps.png" alt="steam-errors" />
+<em>Prediction errors for individual buildings across three different sites for steam meter readings.</em></p>
+
+<h2 id="learnings">Learnings</h2>
+
+<p>A few things I learned from this project:</p>
+
+<ol>
+  <li>
+    <p><strong>Data cleaning is key</strong>: Removing outliers and anomalies from the training data was the key to getting good predictions in this competition. It is worth inspecting data at a low granularity level (in this case at the individual building level), rather than only looking at aggregate trends and statistics.</p>
+  </li>
+  <li>
+    <p><strong>Target encoding</strong>: I hadn’t used target encoding before but it seems like a useful technique for high cardinality categorical features. I didn’t see a significant improvement in performance in this case but I can see how it could be useful in other cases and other modelling approaches.</p>
+  </li>
+  <li>
+    <p><strong>Training gradient boosting models</strong>: I have pretty much always used early stopping when training gradient boosting models because I was worried about overfitting. However, once I had cleaned the training data, the model seemed to be quite stable and I didn’t see any overfitting even for a large number of iterations.</p>
+  </li>
+  <li>
+    <p><strong>Gradient boosting models for high cardinality data</strong>: I was surprised by how well a single gradient boosting model performed on this high cardinality dataset, (1450 buildings x ~2 meter types), and that it could capture consumption patterns for individual buildings. I was also surprised that training individual models for each meter type did not improve performance significantly. Perhaps training individual models across a different dimension (e.g. building use) would have been more useful.</p>
+  </li>
+</ol>
+
+<h2 id="resources">Resources</h2>
+
+<ul>
+  <li><a href="https://github.com/lmalms/sequence-learners/tree/main/ashrae">Code notebooks</a></li>
+  <li><a href="https://medium.com/analytics-vidhya/root-mean-square-log-error-rmse-vs-rmlse-935c6cc1802a">Differences between RMSLE vs. RMSE metrics</a></li>
+  <li><a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.TargetEncoder.html">sklearn TargetEncoder</a></li>
+</ul>]]></content><author><name></name></author><category term="blog" /><summary type="html"><![CDATA[Introduction]]></summary></entry></feed>
