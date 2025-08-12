@@ -6,3 +6,8 @@ title: Lukas Malms
 
 plugins:
   - jekyll-feed
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - NOTES.md
