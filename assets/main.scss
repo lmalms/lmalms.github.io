@@ -1,0 +1,13 @@
+--- 
+---
+@import "minima";
+
+/* Custom styles for justified text */
+.post-content {
+    text-align: justify;
+}
+
+/* Reduce spacing after tables */
+table+p {
+    margin-top: -25px;
+}

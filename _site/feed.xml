@@ -1,4 +1,103 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.5">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-08-12T09:13:27+01:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Lukas Malms</title><entry><title type="html">ASHRAE - Great Energy Predictor III</title><link href="http://localhost:4000/blog/2025/02/17/ashrae.html" rel="alternate" type="text/html" title="ASHRAE - Great Energy Predictor III" /><published>2025-02-17T00:00:00+00:00</published><updated>2025-02-17T00:00:00+00:00</updated><id>http://localhost:4000/blog/2025/02/17/ashrae</id><content type="html" xml:base="http://localhost:4000/blog/2025/02/17/ashrae.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.5">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-08-17T19:43:17+01:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Lukas Malms</title><entry><title type="html">Auckland Bikes</title><link href="http://localhost:4000/blog/2025/08/12/bikes.html" rel="alternate" type="text/html" title="Auckland Bikes" /><published>2025-08-12T00:00:00+01:00</published><updated>2025-08-12T00:00:00+01:00</updated><id>http://localhost:4000/blog/2025/08/12/bikes</id><content type="html" xml:base="http://localhost:4000/blog/2025/08/12/bikes.html"><![CDATA[<h2 id="introduction">Introduction</h2>
+
+<p>Auckland Bikes is a project focused on predicting daily bicycle traffic across various monitoring sites in Auckland. The goal of the project was to expand the range of time series methods in my forecasting toolkit and to deepen my knowledge of these techniques, focussing in particular on deep learning approaches.</p>
+
+<p>The code for data loading, model training and evaluation can be found <a href="https://github.com/lmalms/sequence-learners/tree/main/bikes">here</a>.</p>
+
+<h2 id="data">Data</h2>
+
+<p>Daily bicycle traffic data for various sites across Auckland is available at the <a href="https://at.govt.nz/cycling-walking/research-monitoring/monthly-cycle-monitoring">Auckland Transport Website</a>. For this project, I focused on modelling bicycle movements for 19 different sites using monitoring data from January 2022 to December 2024. The plots below show daily bicycle movement data from a few of these sites.</p>
+
+<p><img src="/assets/bikes/cycle-counts-timeseries.png" alt="cycle-counts-timeseries" />
+<em>Timeseries of bicycle counts at various monitoring sites.</em></p>
+
+<p>Some of the sites (e.g. Dominion Road and Nelson Street) show strong seasonal patterns including both weekly and yearly effects. Other sites (e.g. Lake Road) show much weaker seasonal patterns.</p>
+
+<h2 id="models">Models</h2>
+
+<p>I built the following models for each site:</p>
+
+<ul>
+  <li>Exponential Smoothing Model (ETS)</li>
+  <li>SARIMAX Model</li>
+  <li>Theta Model</li>
+  <li>Prophet Model</li>
+  <li>Recurrent Neural Network (RNN)</li>
+  <li>Long Short Term Memory (LSTM) Neural Network</li>
+  <li>Deep AutoRegressive (DeepAR) Neural Network</li>
+</ul>
+
+<p>I did not spend much time tuning hyperparameters for the neural networks, apart from small adjustments to learning rates and training epochs. The purpose of the project was to build a better understanding of the underlying architecture of these models and the required feature engineering steps, rather than optimise models for predictive performance.</p>
+
+<h2 id="evaluation">Evaluation</h2>
+
+<p>To evaluate predictive performance, I compared each model’s forecasts against ground truth data for the 1 Oct 2024 - 1 Jan 2025 period across each of the 19 monitoring sites. While this is by no means a comprehensive evaluation of predictive performance, my goal was not to benchmark these models rigorously against one another - I simply wanted to see how they performed out of the box with minimal hyperparameter tuning. The table below shows average mean absolute percentage errors (MAPEs) and mean absolute scaled errors (MASEs) for each model across all sites.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center"> </th>
+      <th style="text-align: center">ETS</th>
+      <th style="text-align: center">SARIMAX</th>
+      <th style="text-align: center">Theta</th>
+      <th style="text-align: center">Prophet</th>
+      <th style="text-align: center">RNN</th>
+      <th style="text-align: center">LSTM</th>
+      <th style="text-align: center">DeepAR</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">MAPE</td>
+      <td style="text-align: center">0.348</td>
+      <td style="text-align: center">0.347</td>
+      <td style="text-align: center">0.351</td>
+      <td style="text-align: center"><strong>0.327</strong></td>
+      <td style="text-align: center">0.331</td>
+      <td style="text-align: center">0.360</td>
+      <td style="text-align: center">0.403</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">MASE</td>
+      <td style="text-align: center"><strong>0.827</strong></td>
+      <td style="text-align: center">0.883</td>
+      <td style="text-align: center">0.832</td>
+      <td style="text-align: center">0.850</td>
+      <td style="text-align: center">0.859</td>
+      <td style="text-align: center">0.963</td>
+      <td style="text-align: center">1.005</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>Average MAPE and MASE across all 19 monitoring sites for each model</em></p>
+
+<p>The Prophet model has the lowest MAPE on average across all sites while the ETS model has the lowest MASE. That is, if I could only train a single type of model and performance was equally important across all sites I would pick one of these models given their better performance in this somewhat limited evaluation setting. All of the deep learning models show worse performance on average, although the RNN comes very close (~4%) to both Prophet and ETS. In fact, on MAPE it is the next best performing model after Prophet. DeepAR is the worst performing model on both metrics. Its MASE is bigger than 1.0 and its performance is therefore worse than the in-sample error of the naive forecast.</p>
+
+<p>While the classical time series models generally produced better forecasts than the deep learning models over the validation period, this wasn’t always the case for all sites. Below is an example from the Grafton Road monitoring site where the deep learning models picked up the slight downward trend in bicycle movements, while the ETS, SARIMAX, and Theta models failed to do so. The MAPE for the LSTM network was 0.338 compared to 0.619 for the ETS model for this location.</p>
+
+<p><img src="/assets/bikes/grafton-road-forecasts.png" alt="grafton-road-forecasts" />
+<em>Forecasts for daily bicycle movements at the Grafton Road monitoring site.</em></p>
+
+<p>Another example is from the Mangere Bridge monitoring site, where Prophet produced significantly worse forecasts than all other models (MAPE of 0.503 compared to 0.269 and 0.271 for the ETS and RNN models, respectively).</p>
+
+<p><img src="/assets/bikes/mangere-bridge-forecasts.png" alt="mangere-bridge-forecasts" />
+<em>Forecasts for daily bicycle movements at the Mangere Bridge monitoring site.</em></p>
+
+<h2 id="learnings">Learnings</h2>
+
+<p>My learnings from this project:</p>
+
+<ol>
+  <li>
+    <p>Classical time series models produce decent forecasts out of the box. While they may not be state-of-the-art anymore in many domains, the fact that they produce sensible forecasts with minimal data preprocessing and training code suggests they should be part of each forecasting project even if it is just to benchmark performance of more complex methods.</p>
+  </li>
+  <li>
+    <p>No single model dominates across all locations and model performance can vary significantly across sites. What works well for one location may perform poorly at another.</p>
+  </li>
+</ol>
+
+<p>… both to be taken with a pinch of salt, given the limited validation I have done here.</p>]]></content><author><name></name></author><category term="blog" /><summary type="html"><![CDATA[Introduction]]></summary></entry><entry><title type="html">ASHRAE</title><link href="http://localhost:4000/blog/2025/02/17/ashrae.html" rel="alternate" type="text/html" title="ASHRAE" /><published>2025-02-17T00:00:00+00:00</published><updated>2025-02-17T00:00:00+00:00</updated><id>http://localhost:4000/blog/2025/02/17/ashrae</id><content type="html" xml:base="http://localhost:4000/blog/2025/02/17/ashrae.html"><![CDATA[<h2 id="introduction">Introduction</h2>
 
 <p>This post summarises some of my work on the <a href="https://www.kaggle.com/competitions/ashrae-energy-prediction">ASHRAE III energy prediction competition</a>. The aim of this competition was to predict energy consumption for a range of different buildings, across several sites and meter types in order to estimate energy efficiency gains and cost savings from building retrofits. Knowing how much energy a building would have consumed without any improvements is challenging but necessary in order to quantify efficiency improvements. One option is to build a counterfactual model that estimates building energy consumption in the absence of any building improvements. The purpose of this competition was to find out if machine learning can help with this task.</p>
 
