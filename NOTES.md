@@ -34,6 +34,7 @@ To preview changes locally before pushing to GitHub Pages:
   ```
 
 - **Include draft posts**:
+
   ```bash
   bundle exec jekyll serve --drafts
   ```

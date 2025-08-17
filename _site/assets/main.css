@@ -194,3 +194,9 @@ table td { border: 1px solid #e8e8e8; }
 .highlight .vg { color: #008080; }
 .highlight .vi { color: #008080; }
 .highlight .il { color: #099; }
+
+/* Custom styles for justified text */
+.post-content { text-align: justify; }
+
+/* Reduce spacing after tables */
+table + p { margin-top: -25px; }
