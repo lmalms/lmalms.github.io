@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Smart Charge - Optimising Battery Charging Using MPC | Project Portfolio</title>
+<meta name="generator" content="Jekyll v3.9.5" />
+<meta property="og:title" content="Smart Charge - Optimising Battery Charging Using MPC" />
+<meta name="author" content="Lukas Malms" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Introduction" />
+<meta property="og:description" content="Introduction" />
+<link rel="canonical" href="http://localhost:4000/blog/2025/08/22/smart-charge.html" />
+<meta property="og:url" content="http://localhost:4000/blog/2025/08/22/smart-charge.html" />
+<meta property="og:site_name" content="Project Portfolio" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-08-22T00:00:00+01:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Smart Charge - Optimising Battery Charging Using MPC" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Lukas Malms"},"dateModified":"2025-08-22T00:00:00+01:00","datePublished":"2025-08-22T00:00:00+01:00","description":"Introduction","headline":"Smart Charge - Optimising Battery Charging Using MPC","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/blog/2025/08/22/smart-charge.html"},"url":"http://localhost:4000/blog/2025/08/22/smart-charge.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Project Portfolio" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Project Portfolio</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+    <header class="post-header">
+        <h1 class="post-title p-name" itemprop="name headline">Smart Charge - Optimising Battery Charging Using MPC</h1>
+        <p class="post-meta">
+            <time class="dt-published" datetime="2025-08-22T00:00:00+01:00" itemprop="datePublished">Aug 22, 2025
+            </time></p>
+    </header>
+
+    <div class="post-content e-content" itemprop="articleBody">
+        <h3 id="introduction">Introduction</h3>
+
+<p>Smart Charge is a project that explores how linear programming and model predictive control (MPC) can be used to optimise battery charging. The aim of the project was to learn more about these techniques and their application to problems in the energy sector. The problem setup is intentionally simple and uses synthetic data so that I could focus on understanding the fundamentals before tackling more complex systems.</p>
+
+<h3 id="problem-setup">Problem Setup</h3>
+
+<p>The energy system setup for this problem is illustrated below. It consists of a generation, storage, and consumption node, represented by the energy grid, battery, and house icons, respectively. In this system, energy can only flow from the grid to the battery, and from the battery to the house. Given some forecasts of future electricity prices and demand, the objective of the system is to minimise the cost of electricity consumed whilst meeting demand.</p>
+
+<p><img src="/assets/smart-charge/system-diagram.png" alt="system-diagram" />
+<em>Illustration of home energy system. Generated using ChatGPT.</em></p>
+
+<h3 id="mpc-formulation">MPC Formulation</h3>
+
+<h4 id="variables">Variables</h4>
+
+<ul>
+  <li>$c_k$ - <em>battery state of charge at time $k$</em></li>
+  <li>$s_k$ - <em>supply of energy drawn from electricity grid at time $k$</em></li>
+  <li>$d_k$ - <em>demand of energy drawn from battery at time $k$</em></li>
+  <li>$p_k$ - <em>price of electricity at time $k$</em></li>
+  <li>$t$ - <em>battery capacity</em></li>
+</ul>
+
+<h4 id="objective">Objective</h4>
+
+<p>The objective is to minimise the total cost of electricity consumed. Since in this simplified setup, electricity can only be consumed from the battery node, this is equivalent to minimising the cost of charging the battery.</p>
+
+\[\underset{s_0:\tau}{\min} \sum_{k = 0}^{\tau} \gamma^k s_k p_k\]
+
+<p>where $\tau$ is the optimisation horizon and $\gamma$ is a discount factor (0.95).</p>
+
+<h4 id="constraints">Constraints</h4>
+
+<p>Electricity flow has to be positive at all timesteps:</p>
+
+\[s_k \ge 0 \quad \forall k \in \{0, 1, \ldots, \tau\}\]
+
+<p>Demand has to be met at all timesteps:</p>
+
+\[s_k \ge d_k - c_k \quad \forall k \in \{0, 1, \ldots, \tau\}\]
+
+<p>Battery state of charge cannot exceed total capacity:</p>
+
+\[s_k + c_k - d_k \le t \quad \forall k \in \{0, 1, \ldots, \tau\}\]
+
+<p>Battery state of charge between subsequent timesteps has to evolve according to:</p>
+
+\[c_{k + 1} = c_k + s_k - d_k \quad \forall k \in \{0, 1, \ldots, \tau - 1\}\]
+
+<h3 id="results">Results</h3>
+
+<p>I ran the MPC agent on the following three scenarios and compared its performance against a greedy agent. The code for running both agents on this problem can be found <a href="https://github.com/lmalms/linear-learners/tree/main/battery-charging">here</a>.</p>
+
+<ul>
+  <li><strong>Scenario 1:</strong> Price and demand forecasts perfectly aligned, optimisation horizon $\tau$ of 15 timesteps.</li>
+  <li><strong>Scenario 2:</strong> Price and demand forecasts perfectly aligned, optimisation horizon $\tau$ of 8 timesteps.</li>
+  <li><strong>Scenario 3:</strong> Price and demand forecasts slightly misaligned and include noise.</li>
+</ul>
+
+<h4 id="scenario-1">Scenario 1</h4>
+
+<p>The results from the first scenario for both the greedy and MPC agents are shown below. The greedy agent optimises only for the current timestep, using only the current price and demand data. The optimal action for all timesteps is therefore to only draw from the grid whatever is currently being consumed. As a result, the grid flow for the greedy agent closely follows the demand curve. The exception are the first few timesteps where the agent discharges from the battery directly (initial state of charge is 20 kWh) before then drawing from the grid at later timesteps.</p>
+
+<p>The MPC agent on the other hand, has access to future demand and electricity prices and optimises its charging behaviour accordingly. It charges the battery to maximum capacity when prices are lowest and then maintains that charge by drawing only enough to meet demand. During peak prices, it discharges the battery to avoid expensive grid electricity, effectively using the battery as a buffer. After 72 timesteps, the MPC agent reduces the total cost of charge by approximately 28% compared to the greedy agent.</p>
+
+<p><img src="/assets/smart-charge/aligned_horizon_15.png" alt="aligned-horizon-15" />
+<em>Results from scenario 1.</em></p>
+
+<h4 id="scenario-2">Scenario 2</h4>
+
+<p>The results from the second scenario are similar to those from the first, the main difference being the MPC agent’s charging behaviour around the electricity price minima. The MPC agent again draws the majority of its charge at the lowest electricity prices, but in contrast to the first scenario it does not charge the battery completely (capacity is 50 kWh) when prices are at their minimum. This is because the agent only has access to the next 8 price and demand forecasts, compared to the next 15 timesteps in the first scenario. At the price minimum, the agent therefore only charges enough to cover demand for the next 8 timesteps which is less than the battery’s total capacity.
+Over the next few timesteps, the agent eventually charges the battery to full capacity but it cannot take full advantage of the price minimum as in the first scenario. As a result, the total cost of charge after 72 timesteps is slightly higher than in the first scenario.</p>
+
+<p><img src="/assets/smart-charge/aligned_horizon_8.png" alt="aligned-horizon-8" />
+<em>Results from scenario 2.</em></p>
+
+<h4 id="scenario-3">Scenario 3</h4>
+
+<p>In the final scenario, the MPC agent again has access to forecasts for the next 15 timesteps. The price and demand curves are now slightly misaligned and include some noise, but still follow a broadly similar pattern. As a result, the MPC agent charges the battery to full capacity when electricity prices are lowest, but also takes advantage of local price minima by drawing extra electricity to meet future demand with cheaper energy. In this scenario the MPC agent outperforms the greedy agent by approximately 36% after 72 timesteps.</p>
+
+<p><img src="/assets/smart-charge/misaligned.png" alt="misaligned" />
+<em>Results from scenario 3.</em></p>
+
+    </div><a class="u-url" href="/blog/2025/08/22/smart-charge.html" hidden></a>
+
+    <!-- MathJax for LaTeX support -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</article>
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Project Portfolio</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Lukas Malms</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p></p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

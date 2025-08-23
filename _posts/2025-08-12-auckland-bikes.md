@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Auckland Bikes"
+title: "New Zealand Bikes - Predicting Daily Bicycle Traffic across Auckland"
 date: 2025-08-12
 categories: blog
 ---
