@@ -6,14 +6,34 @@ To preview changes locally before pushing to GitHub Pages:
 
 ### Prerequisites
 
-- Ruby and Bundler installed on your system
+You need **Ruby** (2.6 or newer) and **Bundler** on your system.
+
+#### Installing Ruby and Bundler using Homebrew
+
+```bash
+brew install ruby
+```
+
+Add Homebrew’s Ruby to your PATH (Homebrew will print the exact line after install), e.g.:
+
+```bash
+echo 'export PATH="/opt/homebrew/opt/ruby/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+After installing Ruby, confirm versions:
+
+```bash
+ruby --version
+bundle --version
+```
 
 ### Setup and Running
 
 1. **Install dependencies**:
 
    ```bash
-   bundle install
+   bundle install --path vendor/bundle
    ```
 
 2. **Serve the site locally**:
@@ -23,6 +43,7 @@ To preview changes locally before pushing to GitHub Pages:
    ```
 
 3. **Access your site**:
+
    Open your browser and go to `http://localhost:4000`
 
 ### Additional Options

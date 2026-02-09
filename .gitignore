@@ -1,3 +1,13 @@
+# OS / editor
 .DS_Store
 .vscode
-Gemfile.lock
+
+# Bundler (local config and installed gems)
+.bundle/
+vendor/
+
+# Jekyll build output and caches
+_site/
+.jekyll-cache/
+.jekyll-metadata
+.sass-cache/
